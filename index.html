@@ -455,6 +455,65 @@
 
             <!-- Orders Tab -->
             <div class="tab-pane fade" id="orders">
+                <div class="tab-pane fade" id="orders">
+    <!-- Mevcut kodlar burada kalacak -->
+    
+    <!-- Yeni eklenen fonksiyonel kodlar -->
+    <script>
+    // Sipariş verilerini tutacak global değişken
+    let orders = [];
+
+    // Sipariş ekleme fonksiyonu
+    function addOrder(newOrder) {
+        // Yapay Zeka ile malzeme kontrolü
+        const materialCheck = checkMaterials(newOrder);
+        if (!materialCheck.available) {
+            showAlert(`Eksik malzemeler: ${materialCheck.missing.join(', ')}`, 'danger');
+            return;
+        }
+
+        // Yapay Zeka ile üretim süresi tahmini
+        const productionEstimate = estimateProductionTime(newOrder);
+        newOrder.estimatedTime = productionEstimate;
+        
+        // ERP entegrasyonu
+        integrateWithERP(newOrder);
+        
+        orders.push(newOrder);
+        updateOrderTable();
+        showAlert('Sipariş başarıyla eklendi!', 'success');
+    }
+
+    // Malzeme kontrol fonksiyonu (Yapay Zeka destekli)
+    function checkMaterials(order) {
+        // Burada gerçek bir API çağrısı veya algoritma olacak
+        const requiredMaterials = getRequiredMaterials(order.cellType);
+        const missing = [];
+        
+        requiredMaterials.forEach(mat => {
+            if (currentStock[mat.code] < mat.quantity) {
+                missing.push(mat.name);
+            }
+        });
+        
+        return {
+            available: missing.length === 0,
+            missing: missing
+        };
+    }
+
+    // Üretim süresi tahmini (Yapay Zeka destekli)
+    function estimateProductionTime(order) {
+        // Geçmiş verilere dayalı tahmin algoritması
+        const similarOrders = orders.filter(o => o.cellType === order.cellType);
+        const avgTime = similarOrders.length > 0 ? 
+            similarOrders.reduce((sum, o) => sum + o.actualTime, 0) / similarOrders.length : 
+            defaultTimes[order.cellType];
+        
+        return Math.round(avgTime * 1.1); // %10 buffer ekle
+    }
+    </script>
+</div>
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Sipariş Yönetimi</h5>
@@ -613,6 +672,51 @@
 
             <!-- Production Tab -->
             <div class="tab-pane fade" id="production">
+                <script>
+    // Gerçek zamanlı üretim takip fonksiyonları
+    function updateProductionStatus(orderId, status) {
+        const order = orders.find(o => o.id === orderId);
+        if (order) {
+            order.status = status;
+            order.lastUpdated = new Date();
+            
+            // Yapay Zeka ile gecikme analizi
+            if (status === 'delayed') {
+                analyzeDelay(order);
+            }
+            
+            updateProductionTable();
+            updateGanttChart();
+        }
+    }
+
+    // Gecikme analiz fonksiyonu (Yapay Zeka destekli)
+    function analyzeDelay(order) {
+        const delayReasons = [];
+        
+        // Malzeme eksikliği kontrolü
+        if (!checkMaterials(order).available) {
+            delayReasons.push('Malzeme eksikliği');
+        }
+        
+        // Kaynak yoğunluğu kontrolü
+        if (isResourceOverloaded(order.assignedTeam)) {
+            delayReasons.push('Kaynak yetersizliği');
+        }
+        
+        // Karmaşıklık analizi
+        if (order.complexity > threshold) {
+            delayReasons.push('Yüksek karmaşıklık');
+        }
+        
+        // Yapay Zeka önerileri
+        const recommendations = generateRecommendations(order, delayReasons);
+        
+        // Uyarı oluştur
+        createAlert(orderId, 'Gecikme', delayReasons.join(', '), recommendations);
+    }
+    </script>
+</div>
                 <div class="row">
                     <div class="col-md-8">
                         <div class="card">
@@ -879,6 +983,58 @@
 
             <!-- Materials Tab -->
             <div class="tab-pane fade" id="materials">
+                <script>
+    // Malzeme stok verisi
+    const materials = {
+        '137998%': { name: 'Siemens 7SR1003-1JA20-2DA0+ZY20 24VDC', stock: 2, minStock: 5 },
+        // Diğer malzemeler...
+    };
+
+    // Otomatik sipariş öneri sistemi
+    function checkMaterialLevels() {
+        const toOrder = [];
+        
+        Object.keys(materials).forEach(code => {
+            const mat = materials[code];
+            if (mat.stock < mat.minStock) {
+                // Yapay Zeka ile optimal sipariş miktarı belirleme
+                const forecast = forecastDemand(code);
+                const suggestedOrder = Math.max(
+                    mat.minStock * 2 - mat.stock,
+                    forecast.expectedUsage
+                );
+                
+                toOrder.push({
+                    code,
+                    name: mat.name,
+                    currentStock: mat.stock,
+                    suggestedOrder,
+                    leadTime: forecast.leadTime
+                });
+            }
+        });
+        
+        return toOrder;
+    }
+
+    // Talep tahmini fonksiyonu (Yapay Zeka destekli)
+    function forecastDemand(materialCode) {
+        // Geçmiş kullanım verilerini analiz et
+        const usageHistory = getUsageHistory(materialCode);
+        
+        // Mevcut siparişlerdeki ihtiyacı hesapla
+        const futureDemand = calculateFutureDemand(materialCode);
+        
+        // Mevsimsel etkileri hesaba kat
+        const seasonalFactor = calculateSeasonalFactor(materialCode);
+        
+        return {
+            expectedUsage: (usageHistory.avgUsage * seasonalFactor) + futureDemand,
+            leadTime: usageHistory.avgLeadTime
+        };
+    }
+    </script>
+</div>
                 <div class="row">
                     <div class="col-md-8">
                         <div class="card">
@@ -1243,6 +1399,58 @@
 
             <!-- Settings Tab -->
             <div class="tab-pane fade" id="settings">
+                <script>
+    // ERP Entegrasyon Fonksiyonları
+    async function integrateWithERP(order) {
+        // ERP'ye sipariş bilgilerini gönder
+        try {
+            const response = await fetchERPData('createOrder', order);
+            if (response.success) {
+                order.erpId = response.erpId;
+                return true;
+            }
+            throw new Error(response.message);
+        } catch (error) {
+            console.error('ERP Entegrasyon Hatası:', error);
+            showAlert(`ERP entegrasyon hatası: ${error.message}`, 'danger');
+            return false;
+        }
+    }
+
+    async function fetchERPData(endpoint, data) {
+        // Gerçek bir ERP API entegrasyonu için:
+        // const response = await fetch(`/erp-api/${endpoint}`, {
+        //     method: 'POST',
+        //     headers: { 'Authorization': 'Bearer ' + erpToken },
+        //     body: JSON.stringify(data)
+        // });
+        // return await response.json();
+        
+        // Demo amaçlı simüle edilmiş cevap
+        return new Promise(resolve => {
+            setTimeout(() => {
+                resolve({ 
+                    success: true, 
+                    erpId: 'ERP-' + Math.floor(Math.random() * 10000),
+                    message: 'ERP siparişi oluşturuldu'
+                });
+            }, 1000);
+        });
+    }
+
+    // Stok bilgilerini ERP'den senkronize et
+    async function syncStockLevels() {
+        try {
+            const stockData = await fetchERPData('getStockLevels');
+            updateMaterialStock(stockData);
+            showAlert('Stok bilgileri güncellendi', 'success');
+        } catch (error) {
+            console.error('Stok senkronizasyon hatası:', error);
+            showAlert('Stok bilgileri güncellenemedi', 'danger');
+        }
+    }
+    </script>
+</div>
                 <div class="row">
                     <div class="col-md-6">
                         <div class="card">
@@ -2189,5 +2397,72 @@
             // Burada chatbot modalını açacak kodlar olacak
         });
     </script>
+    <!-- AI Chatbot Modal -->
+<div class="modal fade" id="aiChatModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Yapay Zeka Asistan</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="height: 400px; overflow-y: auto;">
+                <div id="chatMessages"></div>
+            </div>
+            <div class="modal-footer">
+                <div class="input-group">
+                    <input type="text" id="aiChatInput" class="form-control" placeholder="Soru sorun...">
+                    <button class="btn btn-primary" id="sendChatBtn">Gönder</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Chatbot fonksiyonları
+document.getElementById('ai-chatbot-btn').addEventListener('click', function() {
+    const modal = new bootstrap.Modal(document.getElementById('aiChatModal'));
+    modal.show();
+});
+
+document.getElementById('sendChatBtn').addEventListener('click', async function() {
+    const question = document.getElementById('aiChatInput').value;
+    if (!question.trim()) return;
+    
+    addChatMessage('user', question);
+    document.getElementById('aiChatInput').value = '';
+    
+    // Yapay Zeka API çağrısı
+    const response = await callAIAPI(question);
+    addChatMessage('ai', response);
+});
+
+async function callAIAPI(question) {
+    // Gerçek bir API entegrasyonu için:
+    // const response = await fetch('YOUR_AI_API_ENDPOINT', {
+    //     method: 'POST',
+    //     headers: { 'Content-Type': 'application/json' },
+    //     body: JSON.stringify({ question, context: getSystemContext() })
+    // });
+    // return await response.json();
+    
+    // Demo amaçlı simüle edilmiş cevap
+    return simulateAIResponse(question);
+}
+
+function simulateAIResponse(question) {
+    // Burada gerçek bir API yerine demo amaçlı basit bir mantık kullanıyoruz
+    if (question.includes('malzeme')) {
+        const critical = checkMaterialLevels();
+        if (critical.length > 0) {
+            return `Kritik seviyenin altında ${critical.length} malzeme bulunuyor: ` +
+                   critical.map(m => `${m.name} (Stok: ${m.currentStock}, Önerilen: ${m.suggestedOrder})`).join(', ');
+        }
+        return 'Tüm malzeme stokları yeterli seviyede.';
+    }
+    // Diğer soru tipleri için benzer yanıtlar...
+    return "Soru anlaşıldı. Detaylı analiz için sistem verilerini inceliyorum...";
+}
+</script>
 </body>
 </html>
