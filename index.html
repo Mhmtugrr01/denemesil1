@@ -28,6 +28,7 @@
             height: 100vh;
             position: fixed;
             padding-top: 20px;
+            width: 250px; /* Sabit genişlik eklendi */
         }
         
         .sidebar .nav-link {
@@ -169,6 +170,72 @@
         
         .material-critical {
             background-color: #ffebee;
+        }
+        
+        /* Gantt chart styles */
+        .gantt-container {
+            font-size: 12px;
+        }
+        
+        .gantt-header {
+            font-weight: bold;
+        }
+        
+        .gantt-day {
+            border: 1px solid #dee2e6;
+            padding: 2px;
+        }
+        
+        .gantt-row {
+            height: 30px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .gantt-bar {
+            height: 20px;
+            border-radius: 3px;
+            position: absolute;
+            top: 5px;
+        }
+        
+        /* Chat modal styles */
+        .chat-message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+        
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: auto;
+        }
+        
+        .ai-message {
+            background-color: #f1f1f1;
+            margin-right: auto;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .sidebar {
+                width: 220px;
+            }
+            .main-content {
+                margin-left: 220px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+            .main-content {
+                margin-left: 0;
+            }
         }
     </style>
 </head>
@@ -455,521 +522,6 @@
 
             <!-- Orders Tab -->
             <div class="tab-pane fade" id="orders">
-                <script>
-    // Sipariş verilerini tutacak global değişken
-    let orders = [];
-
-    // Sipariş ekleme fonksiyonu
-    function addOrder(newOrder) {
-        // Yapay Zeka ile malzeme kontrolü
-        const materialCheck = checkMaterials(newOrder);
-        if (!materialCheck.available) {
-            showAlert(`Eksik malzemeler: ${materialCheck.missing.join(', ')}`, 'danger');
-            return;
-        }
-
-        // Yapay Zeka ile üretim süresi tahmini
-        const productionEstimate = estimateProductionTime(newOrder);
-        newOrder.estimatedTime = productionEstimate;
-        
-        // ERP entegrasyonu
-        integrateWithERP(newOrder);
-        
-        orders.push(newOrder);
-        updateOrderTable();
-        showAlert('Sipariş başarıyla eklendi!', 'success');
-    }
-
-    // Malzeme kontrol fonksiyonu (Yapay Zeka destekli)
-    function checkMaterials(order) {
-        // Burada gerçek bir API çağrısı veya algoritma olacak
-        const requiredMaterials = getRequiredMaterials(order.cellType);
-        const missing = [];
-        
-        requiredMaterials.forEach(mat => {
-            if (currentStock[mat.code] < mat.quantity) {
-                missing.push(mat.name);
-            }
-        });
-        
-        return {
-            available: missing.length === 0,
-            missing: missing
-        };
-    }
-
-    // Üretim süresi tahmini (Yapay Zeka destekli)
-    function estimateProductionTime(order) {
-        // Geçmiş verilere dayalı tahmin algoritması
-        const similarOrders = orders.filter(o => o.cellType === order.cellType);
-        const avgTime = similarOrders.length > 0 ? 
-            similarOrders.reduce((sum, o) => sum + o.actualTime, 0) / similarOrders.length : 
-            defaultTimes[order.cellType];
-        
-        return Math.round(avgTime * 1.1); // %10 buffer ekle
-    }
-    </script>
-</div>
-<div class="tab-pane fade" id="orders">
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Sipariş Yönetimi</h5>
-            <button class="btn btn-primary" id="newOrderBtn">
-                <i class="bi bi-plus"></i> Yeni Sipariş Ekle
-            </button>
-        </div>
-        <div class="card-body">
-            <!-- Filtreleme alanı -->
-            <div class="mb-3">
-                <div class="row g-2">
-                    <div class="col-md-4">
-                        <input type="text" id="orderSearch" class="form-control" placeholder="Sipariş No Ara...">
-                    </div>
-                    <div class="col-md-3">
-                        <select id="cellTypeFilter" class="form-select">
-                            <option value="">Hücre Tipi Seçin</option>
-                            <option>RM 36 CB</option>
-                            <option>RM 36 LB</option>
-                            <option>RM 36 FL</option>
-                            <option>RMU</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <select id="statusFilter" class="form-select">
-                            <option value="">Durum Seçin</option>
-                            <option>Planlandı</option>
-                            <option>Devam Ediyor</option>
-                            <option>Gecikmiş</option>
-                            <option>Tamamlandı</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <button id="resetFilters" class="btn btn-outline-secondary w-100">Filtreleri Sıfırla</button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Sipariş tablosu -->
-            <div class="table-responsive">
-                <table class="table table-hover custom-table" id="ordersTable">
-                    <thead>
-                        <tr>
-                            <th>Sipariş No</th>
-                            <th>Müşteri</th>
-                            <th>Hücre Tipi</th>
-                            <th>Miktar</th>
-                            <th>Planlanan Teslim</th>
-                            <th>Durum</th>
-                            <th>İlerleme</th>
-                            <th>İşlemler</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ordersTableBody">
-                        <!-- Dinamik olarak dolacak -->
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- Sayfalama -->
-            <nav aria-label="Page navigation">
-                <ul class="pagination justify-content-center" id="ordersPagination">
-                    <!-- Dinamik olarak dolacak -->
-                </ul>
-            </nav>
-        </div>
-    </div>
-</div>
-
-<script>
-// Deepseek API anahtarı
-const DEEPSEEK_API_KEY = "sk-42d0185c484b4bf2907392864f4ae76d";
-const API_BASE_URL = "https://api.deepseek.com/v1";
-
-// Sipariş veri yapısı
-let orders = JSON.parse(localStorage.getItem('orders')) || [];
-let currentPage = 1;
-const itemsPerPage = 10;
-
-// Sayfa yüklendiğinde
-document.addEventListener('DOMContentLoaded', function() {
-    loadOrders();
-    setupEventListeners();
-});
-
-// Siparişleri yükle
-async function loadOrders() {
-    try {
-        // Örnek veri yoksa başlangıç verilerini yükle
-        if (orders.length === 0) {
-            await loadSampleData();
-        }
-        
-        renderOrdersTable();
-        renderPagination();
-    } catch (error) {
-        console.error("Siparişler yüklenirken hata:", error);
-        showAlert("Siparişler yüklenirken bir hata oluştu", "danger");
-    }
-}
-
-// Örnek veri yükleme
-async function loadSampleData() {
-    const response = await fetch('sample_orders.json');
-    const data = await response.json();
-    orders = data;
-    localStorage.setItem('orders', JSON.stringify(orders));
-}
-
-// Tabloyu render et
-function renderOrdersTable(filteredOrders = null) {
-    const ordersToRender = filteredOrders || orders;
-    const start = (currentPage - 1) * itemsPerPage;
-    const end = start + itemsPerPage;
-    const paginatedOrders = ordersToRender.slice(start, end);
-    
-    const tbody = document.getElementById('ordersTableBody');
-    tbody.innerHTML = '';
-    
-    paginatedOrders.forEach(order => {
-        const row = document.createElement('tr');
-        row.className = order.priority ? `priority-${order.priority}` : '';
-        
-        // İlerleme durumu
-        const progressPercentage = calculateProgress(order);
-        
-        row.innerHTML = `
-            <td>${order.orderNumber}</td>
-            <td>${order.customer}</td>
-            <td>${order.cellType}</td>
-            <td>${order.quantity}</td>
-            <td>${formatDate(order.deliveryDate)}</td>
-            <td><span class="status-badge status-${order.status.replace(' ', '-').toLowerCase()}">${order.status}</span></td>
-            <td>
-                <div class="progress progress-thin">
-                    <div class="progress-bar ${getProgressBarClass(order)}" 
-                         role="progressbar" style="width: ${progressPercentage}%">
-                    </div>
-                </div>
-            </td>
-            <td>
-                <button class="btn btn-sm btn-outline-primary view-order" data-id="${order.id}">
-                    <i class="bi bi-eye"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-secondary edit-order" data-id="${order.id}">
-                    <i class="bi bi-pencil"></i>
-                </button>
-            </td>
-        `;
-        
-        tbody.appendChild(row);
-    });
-    
-    // Etkinlik dinleyicilerini ekle
-    document.querySelectorAll('.view-order').forEach(btn => {
-        btn.addEventListener('click', () => viewOrder(btn.dataset.id));
-    });
-    
-    document.querySelectorAll('.edit-order').forEach(btn => {
-        btn.addEventListener('click', () => editOrder(btn.dataset.id));
-    });
-}
-
-// Yapay Zeka destekli sipariş ekleme
-async function addOrder(newOrder) {
-    try {
-        // 1. Malzeme kontrolü (Yapay Zeka)
-        const materialCheck = await checkMaterialsWithAI(newOrder);
-        if (!materialCheck.available) {
-            showAlert(`Eksik malzemeler: ${materialCheck.missing.join(', ')}`, 'danger');
-            return false;
-        }
-        
-        // 2. Üretim süresi tahmini (Yapay Zeka)
-        const productionEstimate = await estimateProductionTimeWithAI(newOrder);
-        newOrder.estimatedTime = productionEstimate.days;
-        newOrder.estimatedReason = productionEstimate.reason;
-        
-        // 3. ERP entegrasyonu
-        const erpResult = await integrateWithERP(newOrder);
-        if (!erpResult.success) {
-            throw new Error(erpResult.message);
-        }
-        
-        // 4. Siparişi kaydet
-        newOrder.id = generateId();
-        newOrder.createdAt = new Date().toISOString();
-        newOrder.status = "Planlandı";
-        newOrder.progress = 0;
-        
-        orders.unshift(newOrder);
-        saveOrders();
-        
-        // 5. UI güncelleme
-        renderOrdersTable();
-        showAlert('Sipariş başarıyla eklendi!', 'success');
-        
-        return true;
-    } catch (error) {
-        console.error("Sipariş ekleme hatası:", error);
-        showAlert(`Sipariş eklenirken hata: ${error.message}`, 'danger');
-        return false;
-    }
-}
-
-// Yapay Zeka ile malzeme kontrolü
-async function checkMaterialsWithAI(order) {
-    const prompt = `
-        Aşağıdaki sipariş için gerekli malzemeleri ve stok durumunu kontrol et:
-        Ürün Tipi: ${order.cellType}
-        Miktar: ${order.quantity}
-        
-        Malzeme listesi formatı:
-        - Malzeme Kodu: [kod], Malzeme Adı: [isim], Gerekli Miktar: [miktar], Stok Durumu: [stok]
-        
-        Eksik malzemeleri listele.
-        Yanıtı sadece JSON formatında ver:
-        {
-            "available": boolean,
-            "missing": ["malzeme1", "malzeme2"],
-            "details": [
-                {
-                    "code": "malzeme_kodu",
-                    "name": "malzeme_adi",
-                    "required": number,
-                    "stock": number
-                }
-            ]
-        }
-    `;
-    
-    try {
-        const response = await callDeepseekAPI(prompt);
-        return JSON.parse(response);
-    } catch (error) {
-        console.error("AI malzeme kontrol hatası:", error);
-        return {
-            available: true,
-            missing: [],
-            details: []
-        };
-    }
-}
-
-// Deepseek API çağrısı
-async function callDeepseekAPI(prompt, model = "deepseek-chat") {
-    const response = await fetch(`${API_BASE_URL}/chat/completions`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-        },
-        body: JSON.stringify({
-            model: model,
-            messages: [
-                {
-                    role: "system",
-                    content: "Sen bir üretim planlama asistanısın. Sadece istenen formatta yanıt ver."
-                },
-                {
-                    role: "user",
-                    content: prompt
-                }
-            ],
-            temperature: 0.3,
-            max_tokens: 2000
-        })
-    });
-    
-    const data = await response.json();
-    return data.choices[0].message.content;
-}
-</script>
-<script>
-// Gelişmiş Yapay Zeka Fonksiyonları
-
-// Üretim süresi tahmini (Gelişmiş Yapay Zeka)
-async function estimateProductionTimeWithAI(order) {
-    const prompt = `
-        Aşağıdaki sipariş için üretim süresi tahmini yap:
-        
-        Sipariş Detayları:
-        - Müşteri: ${order.customer}
-        - Ürün Tipi: ${order.cellType}
-        - Miktar: ${order.quantity}
-        - Özel Notlar: ${order.specialNotes || 'Yok'}
-        
-        Geçmiş veriler:
-        ${getHistoricalDataForAI(order.cellType)}
-        
-        Tahmini üretim süresini gün olarak ve gecikme risklerini analiz ederek JSON formatında yanıtla:
-        {
-            "days": number,
-            "confidence": "low/medium/high",
-            "risks": ["risk1", "risk2"],
-            "reason": "string",
-            "recommendations": ["öneri1", "öneri2"]
-        }
-    `;
-    
-    try {
-        const response = await callDeepseekAPI(prompt);
-        return JSON.parse(response);
-    } catch (error) {
-        console.error("AI tahmin hatası:", error);
-        return {
-            days: 14,
-            confidence: "medium",
-            risks: ["Genel riskler geçerli"],
-            reason: "Standart üretim süresi",
-            recommendations: []
-        };
-    }
-}
-
-// Gerçek zamanlı üretim optimizasyonu
-async function optimizeProductionSchedule() {
-    const prompt = `
-        Aşağıdaki siparişleri en uygun şekilde planla:
-        
-        Aktif Siparişler:
-        ${JSON.stringify(orders.filter(o => o.status !== 'Tamamlandı'), null, 2)}
-        
-        Kaynaklar:
-        - Mekanik Üretim: 5 ekip
-        - Elektrik Montaj: 3 ekip
-        - Test: 2 ekip
-        
-        Optimal üretim planını JSON formatında oluştur:
-        {
-            "schedule": [
-                {
-                    "orderId": "string",
-                    "startDate": "YYYY-MM-DD",
-                    "endDate": "YYYY-MM-DD",
-                    "teamAssignments": {
-                        "mechanical": "string",
-                        "electrical": "string",
-                        "testing": "string"
-                    },
-                    "priority": number
-                }
-            ],
-            "totalDuration": number,
-            "bottlenecks": ["darboğaz1", "darboğaz2"],
-            "efficiencyImprovements": ["öneri1", "öneri2"]
-        }
-    `;
-    
-    const response = await callDeepseekAPI(prompt, "deepseek-coder");
-    return JSON.parse(response);
-}
-
-// Hata analizi ve öneri sistemi
-async function analyzeProductionIssues() {
-    const delayedOrders = orders.filter(o => o.status === 'Gecikiyor');
-    
-    const prompt = `
-        Aşağıdaki geciken siparişleri analiz ederek kök neden analizi yap ve iyileştirme önerileri sun:
-        
-        Geciken Siparişler:
-        ${JSON.stringify(delayedOrders, null, 2)}
-        
-        Üretim Kayıtları:
-        ${getProductionLogs()}
-        
-        Analiz sonucunu JSON formatında ver:
-        {
-            "rootCauses": [
-                {
-                    "type": "string",
-                    "frequency": number,
-                    "ordersAffected": ["id1", "id2"],
-                    "solution": "string"
-                }
-            ],
-            "topRecommendations": ["öneri1", "öneri2"],
-            "priorityActions": [
-                {
-                    "action": "string",
-                    "impact": "low/medium/high",
-                    "effort": "low/medium/high"
-                }
-            ]
-        }
-    `;
-    
-    const response = await callDeepseekAPI(prompt);
-    return JSON.parse(response);
-}
-</script>
-<script>
-// Gelişmiş ERP Entegrasyonu
-async function integrateWithERP(order) {
-    // 1. ERP'ye sipariş oluştur
-    const erpOrder = {
-        orderNumber: order.orderNumber,
-        customer: order.customer,
-        items: await generateERPItems(order),
-        deliveryDate: order.deliveryDate,
-        priority: order.priority || 'normal'
-    };
-    
-    try {
-        // 2. ERP API çağrısı
-        const response = await fetch('/api/erp/orders', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + getERPToken()
-            },
-            body: JSON.stringify(erpOrder)
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.message || 'ERP entegrasyon hatası');
-        }
-        
-        // 3. Stok rezervasyonu
-        await reserveMaterialsInERP(order);
-        
-        return {
-            success: true,
-            erpId: data.orderId,
-            message: 'ERP siparişi başarıyla oluşturuldu'
-        };
-    } catch (error) {
-        console.error('ERP Entegrasyon Hatası:', error);
-        return {
-            success: false,
-            error: error.message
-        };
-    }
-}
-
-// ERP için malzeme listesi oluşturma
-async function generateERPItems(order) {
-    // Yapay Zeka ile optimize edilmiş malzeme listesi
-    const aiResponse = await callDeepseekAPI(`
-        ${order.cellType} ürünü için ERP'ye gönderilecek malzeme listesini oluştur.
-        Miktar: ${order.quantity}
-        
-        Çıktıyı sadece JSON formatında ver:
-        [
-            {
-                "code": "malzeme_kodu",
-                "name": "malzeme_adi",
-                "quantity": number,
-                "unit": "string",
-                "warehouse": "string"
-            }
-        ]
-    `);
-    
-    return JSON.parse(aiResponse);
-}
-</script>
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Sipariş Yönetimi</h5>
@@ -1128,51 +680,6 @@ async function generateERPItems(order) {
 
             <!-- Production Tab -->
             <div class="tab-pane fade" id="production">
-                <script>
-    // Gerçek zamanlı üretim takip fonksiyonları
-    function updateProductionStatus(orderId, status) {
-        const order = orders.find(o => o.id === orderId);
-        if (order) {
-            order.status = status;
-            order.lastUpdated = new Date();
-            
-            // Yapay Zeka ile gecikme analizi
-            if (status === 'delayed') {
-                analyzeDelay(order);
-            }
-            
-            updateProductionTable();
-            updateGanttChart();
-        }
-    }
-
-    // Gecikme analiz fonksiyonu (Yapay Zeka destekli)
-    function analyzeDelay(order) {
-        const delayReasons = [];
-        
-        // Malzeme eksikliği kontrolü
-        if (!checkMaterials(order).available) {
-            delayReasons.push('Malzeme eksikliği');
-        }
-        
-        // Kaynak yoğunluğu kontrolü
-        if (isResourceOverloaded(order.assignedTeam)) {
-            delayReasons.push('Kaynak yetersizliği');
-        }
-        
-        // Karmaşıklık analizi
-        if (order.complexity > threshold) {
-            delayReasons.push('Yüksek karmaşıklık');
-        }
-        
-        // Yapay Zeka önerileri
-        const recommendations = generateRecommendations(order, delayReasons);
-        
-        // Uyarı oluştur
-        createAlert(orderId, 'Gecikme', delayReasons.join(', '), recommendations);
-    }
-    </script>
-</div>
                 <div class="row">
                     <div class="col-md-8">
                         <div class="card">
@@ -1439,58 +946,6 @@ async function generateERPItems(order) {
 
             <!-- Materials Tab -->
             <div class="tab-pane fade" id="materials">
-                <script>
-    // Malzeme stok verisi
-    const materials = {
-        '137998%': { name: 'Siemens 7SR1003-1JA20-2DA0+ZY20 24VDC', stock: 2, minStock: 5 },
-        // Diğer malzemeler...
-    };
-
-    // Otomatik sipariş öneri sistemi
-    function checkMaterialLevels() {
-        const toOrder = [];
-        
-        Object.keys(materials).forEach(code => {
-            const mat = materials[code];
-            if (mat.stock < mat.minStock) {
-                // Yapay Zeka ile optimal sipariş miktarı belirleme
-                const forecast = forecastDemand(code);
-                const suggestedOrder = Math.max(
-                    mat.minStock * 2 - mat.stock,
-                    forecast.expectedUsage
-                );
-                
-                toOrder.push({
-                    code,
-                    name: mat.name,
-                    currentStock: mat.stock,
-                    suggestedOrder,
-                    leadTime: forecast.leadTime
-                });
-            }
-        });
-        
-        return toOrder;
-    }
-
-    // Talep tahmini fonksiyonu (Yapay Zeka destekli)
-    function forecastDemand(materialCode) {
-        // Geçmiş kullanım verilerini analiz et
-        const usageHistory = getUsageHistory(materialCode);
-        
-        // Mevcut siparişlerdeki ihtiyacı hesapla
-        const futureDemand = calculateFutureDemand(materialCode);
-        
-        // Mevsimsel etkileri hesaba kat
-        const seasonalFactor = calculateSeasonalFactor(materialCode);
-        
-        return {
-            expectedUsage: (usageHistory.avgUsage * seasonalFactor) + futureDemand,
-            leadTime: usageHistory.avgLeadTime
-        };
-    }
-    </script>
-</div>
                 <div class="row">
                     <div class="col-md-8">
                         <div class="card">
@@ -1855,58 +1310,6 @@ async function generateERPItems(order) {
 
             <!-- Settings Tab -->
             <div class="tab-pane fade" id="settings">
-                <script>
-    // ERP Entegrasyon Fonksiyonları
-    async function integrateWithERP(order) {
-        // ERP'ye sipariş bilgilerini gönder
-        try {
-            const response = await fetchERPData('createOrder', order);
-            if (response.success) {
-                order.erpId = response.erpId;
-                return true;
-            }
-            throw new Error(response.message);
-        } catch (error) {
-            console.error('ERP Entegrasyon Hatası:', error);
-            showAlert(`ERP entegrasyon hatası: ${error.message}`, 'danger');
-            return false;
-        }
-    }
-
-    async function fetchERPData(endpoint, data) {
-        // Gerçek bir ERP API entegrasyonu için:
-        // const response = await fetch(`/erp-api/${endpoint}`, {
-        //     method: 'POST',
-        //     headers: { 'Authorization': 'Bearer ' + erpToken },
-        //     body: JSON.stringify(data)
-        // });
-        // return await response.json();
-        
-        // Demo amaçlı simüle edilmiş cevap
-        return new Promise(resolve => {
-            setTimeout(() => {
-                resolve({ 
-                    success: true, 
-                    erpId: 'ERP-' + Math.floor(Math.random() * 10000),
-                    message: 'ERP siparişi oluşturuldu'
-                });
-            }, 1000);
-        });
-    }
-
-    // Stok bilgilerini ERP'den senkronize et
-    async function syncStockLevels() {
-        try {
-            const stockData = await fetchERPData('getStockLevels');
-            updateMaterialStock(stockData);
-            showAlert('Stok bilgileri güncellendi', 'success');
-        } catch (error) {
-            console.error('Stok senkronizasyon hatası:', error);
-            showAlert('Stok bilgileri güncellenemedi', 'danger');
-        }
-    }
-    </script>
-</div>
                 <div class="row">
                     <div class="col-md-6">
                         <div class="card">
@@ -2078,7 +1481,7 @@ async function generateERPItems(order) {
 
     <!-- AI Chatbot -->
     <div class="ai-chatbot">
-        <div class="ai-chatbot-btn">
+        <div class="ai-chatbot-btn" id="ai-chatbot-btn">
             <i class="bi bi-robot"></i>
             <span class="notification-badge">3</span>
         </div>
@@ -2275,10 +1678,10 @@ async function generateERPItems(order) {
                                 <label for="busbar" class="form-label">Diziliş Bara (Canias Kodu)</label>
                                 <input type="text" class="form-control" id="busbar" value="109367%">
                             </div>
-                            <col-md-6>
+                            <div class="col-md-6">
                                 <label for="closureDetail" class="form-label">Kapama Detayı</label>
                                 <input type="text" class="form-control" id="closureDetail">
-                            </col-md-6>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label for="otherFeatures" class="form-label">Diğer Özellikler</label>
@@ -2472,6 +1875,27 @@ async function generateERPItems(order) {
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
                     <button type="button" class="btn btn-primary">Kullanıcı Ekle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Chatbot Modal -->
+    <div class="modal fade" id="aiChatModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Yapay Zeka Asistan</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="height: 400px; overflow-y: auto;">
+                    <div id="chatMessages"></div>
+                </div>
+                <div class="modal-footer">
+                    <div class="input-group">
+                        <input type="text" id="aiChatInput" class="form-control" placeholder="Soru sorun...">
+                        <button class="btn btn-primary" id="sendChatBtn">Gönder</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2847,78 +2271,52 @@ async function generateERPItems(order) {
             calendar.render();
         });
 
-        // AI Chatbot Button
-        document.querySelector('.ai-chatbot-btn').addEventListener('click', function() {
-            alert('Yapay Zeka Chatbotu açılıyor...');
-            // Burada chatbot modalını açacak kodlar olacak
+        // Chatbot functions
+        document.getElementById('ai-chatbot-btn').addEventListener('click', function() {
+            const modal = new bootstrap.Modal(document.getElementById('aiChatModal'));
+            modal.show();
+        });
+
+        document.getElementById('sendChatBtn').addEventListener('click', async function() {
+            const question = document.getElementById('aiChatInput').value;
+            if (!question.trim()) return;
+            
+            addChatMessage('user', question);
+            document.getElementById('aiChatInput').value = '';
+            
+            // Simulate AI response (in a real app, this would be an API call)
+            setTimeout(() => {
+                const response = simulateAIResponse(question);
+                addChatMessage('ai', response);
+            }, 1000);
+        });
+
+        function addChatMessage(sender, message) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}-message`;
+            messageDiv.textContent = message;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function simulateAIResponse(question) {
+            // This is a simplified simulation - in a real app, you would call an AI API
+            if (question.includes('malzeme')) {
+                return "Kritik seviyenin altında 2 malzeme bulunuyor: Siemens 7SR1003-1JA20-2DA0+ZY20 24VDC (Stok: 2, Önerilen: 5) ve KAP-80/190-95 Akım Trafosu (Stok: 3, Önerilen: 5).";
+            } else if (question.includes('üretim') || question.includes('süre')) {
+                return "Mevcut üretim planına göre ortalama tamamlama süresi 14 gün. Gecikme riski %15 olarak hesaplanmıştır.";
+            } else if (question.includes('hücre') || question.includes('RM')) {
+                return "RM 36 CB hücresinin ortalama üretim süresi 12 iş günüdür. Malzeme temin süreleri dahil değildir.";
+            }
+            return "Soru anlaşıldı. Detaylı analiz için sistem verilerini inceliyorum...";
+        }
+
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
         });
     </script>
-    <!-- AI Chatbot Modal -->
-<div class="modal fade" id="aiChatModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Yapay Zeka Asistan</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" style="height: 400px; overflow-y: auto;">
-                <div id="chatMessages"></div>
-            </div>
-            <div class="modal-footer">
-                <div class="input-group">
-                    <input type="text" id="aiChatInput" class="form-control" placeholder="Soru sorun...">
-                    <button class="btn btn-primary" id="sendChatBtn">Gönder</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-// Chatbot fonksiyonları
-document.getElementById('ai-chatbot-btn').addEventListener('click', function() {
-    const modal = new bootstrap.Modal(document.getElementById('aiChatModal'));
-    modal.show();
-});
-
-document.getElementById('sendChatBtn').addEventListener('click', async function() {
-    const question = document.getElementById('aiChatInput').value;
-    if (!question.trim()) return;
-    
-    addChatMessage('user', question);
-    document.getElementById('aiChatInput').value = '';
-    
-    // Yapay Zeka API çağrısı
-    const response = await callAIAPI(question);
-    addChatMessage('ai', response);
-});
-
-async function callAIAPI(question) {
-    // Gerçek bir API entegrasyonu için:
-    // const response = await fetch('YOUR_AI_API_ENDPOINT', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify({ question, context: getSystemContext() })
-    // });
-    // return await response.json();
-    
-    // Demo amaçlı simüle edilmiş cevap
-    return simulateAIResponse(question);
-}
-
-function simulateAIResponse(question) {
-    // Burada gerçek bir API yerine demo amaçlı basit bir mantık kullanıyoruz
-    if (question.includes('malzeme')) {
-        const critical = checkMaterialLevels();
-        if (critical.length > 0) {
-            return `Kritik seviyenin altında ${critical.length} malzeme bulunuyor: ` +
-                   critical.map(m => `${m.name} (Stok: ${m.currentStock}, Önerilen: ${m.suggestedOrder})`).join(', ');
-        }
-        return 'Tüm malzeme stokları yeterli seviyede.';
-    }
-    // Diğer soru tipleri için benzer yanıtlar...
-    return "Soru anlaşıldı. Detaylı analiz için sistem verilerini inceliyorum...";
-}
-</script>
 </body>
 </html>
